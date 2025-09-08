@@ -12,6 +12,7 @@ spring:
         format_sql: true      # 쿼리 로그 포맷 (정렬)
         show_sql: true        # 쿼리 로그 출력
         use_sql_comments: true # 쿼리 로그에 주석 사용
+        default_batch_fetch_size: 100    # 지연 로딩 배치 사이즈
   output:
     ansi:
       enabled: always # ANSI 컬러 출력 설정

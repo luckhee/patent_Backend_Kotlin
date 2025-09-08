@@ -1,7 +1,9 @@
 package com.back.domain.chat.chat.repository
 
 import com.back.domain.chat.chat.entity.RoomParticipant
+import io.lettuce.core.dynamic.annotation.Param
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import java.util.*
 
@@ -12,8 +14,12 @@ interface RoomParticipantRepository : JpaRepository<RoomParticipant, Long> {
 
     fun findByChatRoomIdAndIsActiveTrue(chatRoomId: Long): List<RoomParticipant>
 
-
-    fun findByMemberIdAndIsActiveTrueOrderByCreatedAtDesc(id: Long): List<RoomParticipant>
+    @Query("SELECT rp FROM RoomParticipant rp " +
+            "JOIN FETCH rp.chatRoom cr " +
+            "LEFT JOIN FETCH cr.post " +
+            "WHERE rp.member.id = :memberId AND rp.isActive = true " +
+            "ORDER BY rp.createdAt DESC")
+    fun findByMemberIdAndIsActiveTrueOrderByCreatedAtDesc(@Param("memberId") memberId: Long): List<RoomParticipant>
 
     fun findByChatRoomIdAndMemberIdAndIsActiveTrue(chatRoomId: Long, id: Long): Optional<RoomParticipant>
 

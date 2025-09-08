@@ -63,6 +63,9 @@ dependencies {
 
     // Redis 관련 추가
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    
+    // Spring Cache 추가
+    implementation("org.springframework.boot:spring-boot-starter-cache")
 
 }
 dependencyManagement {

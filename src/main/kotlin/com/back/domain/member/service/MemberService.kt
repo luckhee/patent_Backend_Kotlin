@@ -4,6 +4,7 @@ import com.back.domain.auth.dto.request.MemberSignupRequest
 import com.back.domain.files.files.service.FileStorageService
 import com.back.domain.member.dto.request.FindPasswordRequest
 import com.back.domain.member.dto.request.MemberUpdateRequest
+import com.back.domain.member.dto.response.MemberCacheDto
 import com.back.domain.member.dto.response.MemberMyPageResponse
 import com.back.domain.member.dto.response.OtherMemberInfoResponse
 import com.back.domain.member.entity.Member
@@ -11,6 +12,9 @@ import com.back.domain.member.repository.MemberRepository
 import com.back.global.exception.ServiceException
 import com.back.global.rsData.ResultCode
 import org.slf4j.LoggerFactory
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,10 +27,41 @@ import java.io.IOException
 class MemberService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val fileStorageService: FileStorageService
+    private val fileStorageService: FileStorageService,
+    private val cacheManager: CacheManager
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(MemberService::class.java)
+    }
+
+    /**
+     * 이메일로 회원 정보 조회 (캐시 적용)
+     * Chat 서비스에서 자주 호출되는 메서드
+     */
+    @Cacheable(value = ["memberCache"], key = "#email")
+    @Transactional(readOnly = true)
+    fun findMemberByEmail(email: String): MemberCacheDto? {
+        log.debug("=== Cache MISS - DB에서 Member 조회: {} ===", email)
+        return memberRepository.findByEmail(email)
+            .map { member ->
+                log.debug("=== Member 정보 캐시에 저장: {} ===", email)
+                MemberCacheDto.fromEntity(member)
+            }
+            .orElse(null)
+    }
+
+    /**
+     * 캐시된 Member 정보를 실제 Member 엔티티로 변환
+     * Chat 서비스에서 사용할 수 있도록
+     */
+    fun getMemberEntityByEmail(email: String): Member? {
+        val cachedMember = findMemberByEmail(email)
+        return if (cachedMember != null) {
+            // 캐시에서 가져온 정보로 실제 DB에서 완전한 엔티티 조회
+            memberRepository.findById(cachedMember.id).orElse(null)
+        } else {
+            null
+        }
     }
 
     // 회원 가입
@@ -80,6 +115,7 @@ class MemberService(
 
     // 회원 정보 수정
     @Transactional
+    @CacheEvict(value = ["memberCache"], key = "#member.email")
     fun updateMemberInfo(member: Member, request: MemberUpdateRequest) {
         // 1. 반드시 영속 상태로 다시 가져오기
         val foundMember = memberRepository.findById(member.id)

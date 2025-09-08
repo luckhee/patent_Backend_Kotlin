@@ -4,15 +4,16 @@ import com.back.domain.chat.chat.dto.MessageDto
 import com.back.domain.member.entity.Member
 import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
 
 @Entity
 class Message : BaseEntity {
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     var chatRoom: ChatRoom? = null  // private set 제거
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     var member: Member? = null
 
     var content: String = ""
